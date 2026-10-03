@@ -15,7 +15,7 @@ class Reserve extends Model
             'check_out' => 'date',
             'total' => 'decimal:2',
         ];
-    };
+    }
 
     public function hotel()
     {

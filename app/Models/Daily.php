@@ -15,7 +15,7 @@ class Daily extends Model
             'date' => 'date',
             'value' => 'decimal:2',
         ];
-    };
+    }
 
     public function reserve(): BelongsTo
     {

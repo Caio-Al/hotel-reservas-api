@@ -13,7 +13,7 @@ class Payment extends Model
         return [
             'value' => 'decimal:2',
         ];
-    };
+    }
 
     public function reserve(): BelongsTo
     {

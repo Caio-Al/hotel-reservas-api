@@ -37,4 +37,10 @@ git push -u origin main
 
 *colocando o nome n migrate de hotel e criando o model de hotal 
 
-*criando o make:model de 
+*criando o make:model de Room
+*criando o make:model de Reserve
+*criando o make:model de Guest
+*criando o make:model de Daily
+*criando o make:model de Payment
+
+*em ordem para n comprometer a ordem de cadastro
