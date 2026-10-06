@@ -174,3 +174,27 @@ os ids e as reações do XML são mantidos,a reserva 6 é do hotel 2, quarto 3, 
 que rodar varias vezes não duplica, que a diaria fora do periodo gera aviso mas a reserva é importada e que uma pasta inexistente da erro sem gravar nada
 
 rodei a suíte e também a importação de verdade no MySQL, duas vezes seguidas, com os mesmos números. Os testes usam SQLite em memória e a importação manual usa o MySQL, então os dois ambientes foram validados.
+
+
+### modelagem do banco (diagrama)
+
+o desafio sugere modelar o banco com o MySQL Workbench, então gerei o diagrama por engenharia reversa do banco que as migrations criaram (Database > Reverse Engineer). Fiz isso quando o schema já estava completo (com users, coupons e as colunas de preço), pra não precisar refazer o diagrama.
+
+### como gerei
+
+conectei o Workbench no MySQL do Sail por fora do Docker: host 127.0.0.1, porta 3306, com o usuário e a senha do .env  Workbench avisou que a versão do servidor (8.4) é mais nova que as que ele foi testado (até a 8.0), mas conectou normalmente e o reverse engineer funcionou 
+deixei só as 8 tabelas do sistema (hotels, rooms, reserves, guests, dailies, payments, coupons e users) e tirei as do Laravel (cache, jobs, sessions, migrations etc.), porque elas não fazem parte da modelagem do hotel
+usei a notação Crow's Foot e arrumei as caixas na mão
+
+### o que foi versionado
+
+em docs/database/:
+
+hotel_reservas.mwb: o modelo do Workbench
+hotel_reservas.png: a imagem do diagrama
+### decisões de modelagem
+
+cada elemento do XML virou uma tabela, e o id do XML é mantido em hotéis, quartos e reservas. Hóspedes, diárias e pagamentos têm id próprio, porque o XML não traz
+o hóspede pertence a uma reserva. O mesmo hóspede aparece em mais de uma reserva do XML
+dinheiro em decimal(10,2)
+payments.method fica como número
