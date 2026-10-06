@@ -3,18 +3,19 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Hotel extends Model
 {
-    protected $fillable = ['id', 'name'];   
+    protected $fillable = ['id', 'name'];
 
-    public function rooms()
+    public function rooms(): HasMany
     {
-        return $this->hasMany(Room::class); 
+        return $this->hasMany(Room::class);
     }
 
-    public function reservations()
+    public function reserves(): HasMany
     {
-        return $this->hasMany(Reserve::class); 
+        return $this->hasMany(Reserve::class);
     }
 }
