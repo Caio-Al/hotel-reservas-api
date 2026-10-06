@@ -11,8 +11,8 @@ class Reserve extends Model
         protected function casts(): array
     {
         return [
-            'check_in' => 'date',
-            'check_out' => 'date',
+            'check_in' => 'date:Y-m-d',
+            'check_out' => 'date:Y-m-d',
             'total' => 'decimal:2',
         ];
     }
