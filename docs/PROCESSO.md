@@ -198,3 +198,36 @@ cada elemento do XML virou uma tabela, e o id do XML é mantido em hotéis, quar
 o hóspede pertence a uma reserva. O mesmo hóspede aparece em mais de uma reserva do XML
 dinheiro em decimal(10,2)
 payments.method fica como número
+
+### segurança e logs
+
+segurança e logs de aplicação foram pedidos como diferenciais, e como a api vai mexer com reservas e pagamentos, toda rota exige identificação, menos o login
+
+## autentificação
+
+usei o Laravel Sanctum, que já veio com o install:api. O login devolve um token, e o cliente manda ele no cabeçalho Authorization: Bearer. O token fica guardado no banco, então o logout apaga ele e ele deixa de valer na hora. Escolhi isso no lugar do JWT porque o JWT puro não tem uma revogação simples, e o Passport (OAuth2 completo) acredito que seja pesado pra uma api de uso interno
+
+o token expira em 24 horas (expiration de 1440 minutos no config/sanctum.php).
+
+as rotas são POST /api/login, POST /api/logout e GET /api/me (que mostra o usuário logado, com papel e hotel).
+
+## proteções
+
+limite de requisições: o login aceita 5 tentativas por minuto, pra dificultar tentar adivinhar senha, e as outras rotas têm 60 por minuto. Passou disso, a API devolve 429
+e-mail que não existe e senha errada dão a mesma resposta (401, "Credenciais inválidas.")
+toda rota /api/* responde em JSON, inclusive o 401 e o 404. O 404 é genérico, pra não aparecer o nome de classes internas, como App\Models\Room
+as senhas são gravadas com hash, e role e hotel_id não podem ser preenchidos em massa (passo 4)
+
+## logs
+
+mudei o log para o canal diário: um arquivo por dia em storage/logs, guardando 14 dias, pra o log não crescer sem fim. Isso é feito com LOG_STACK=daily e LOG_DAILY_DAYS=14, no .env e no .env.example.
+
+por enquanto são registrados o login e a falha de login (com o id e o IP, nem senha, nem o token), a importação do XML e as regras de negócio violadas. Essas últimas vão como warning, porque são situações esperadas, e erros inesperados vão como error. Os logs de quarto, reserva e pagamento entram junto com as rotas deles.
+
+criei também a BusinessRuleException, uma exceção base pras regras de negócio (quarto indisponível, cupom inválido e etc). Cada uma define seu status HTTP e responde em JSON. Ainda não é usada, vai ser nos passos de reservas.
+
+### como testei
+
+rodei a suíte inteira (27 testes, passando). Os 7 testes novos (AuthTest) cobrem login com token, senha errada, validação, 401 sem token, logout revogando o token, o limite de 5 tentativas e o 404 genérico.
+
+também testei com curl na API rodando: login do admin do seeder, /api/me com token (200), sem token (401, com e sem o Accept), rota inexistente (404) e logout (200).
