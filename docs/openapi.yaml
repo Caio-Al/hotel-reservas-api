@@ -1,0 +1,450 @@
+openapi: 3.0.0
+info:
+  title: Hotel Reservas API
+  version: 1.0.0
+  description: |
+    API REST (JSON) para gestão de quartos e reservas de hotel.
+    Autenticação por token Bearer (Laravel Sanctum): faça login em `/api/login` e envie o token no cabeçalho `Authorization`.
+servers:
+  - url: http://localhost
+    description: Ambiente local (Docker/Sail)
+tags:
+  - name: Autenticação
+  - name: Quartos
+  - name: Reservas
+  - name: Pagamentos
+security:
+  - bearerAuth: []
+
+paths:
+  /api/login:
+    post:
+      tags: [Autenticação]
+      summary: Gera um token de acesso
+      description: Limite de 5 tentativas por minuto.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email, example: admin@hotel.test }
+                password: { type: string, example: password }
+      responses:
+        '200':
+          description: Login realizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  token: { type: string }
+                  token_type: { type: string, example: Bearer }
+                  user: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429': { $ref: '#/components/responses/Message' }
+
+  /api/logout:
+    post:
+      tags: [Autenticação]
+      summary: Revoga o token atual
+      responses:
+        '200': { $ref: '#/components/responses/Message' }
+        '401': { $ref: '#/components/responses/Message' }
+
+  /api/me:
+    get:
+      tags: [Autenticação]
+      summary: Dados do usuário autenticado
+      responses:
+        '200':
+          description: Usuário
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/User' }
+        '401': { $ref: '#/components/responses/Message' }
+
+  /api/rooms:
+    get:
+      tags: [Quartos]
+      summary: Lista quartos (paginado)
+      description: Admin vê todos os hotéis e pode filtrar por `hotel_id`. Os demais veem só o próprio hotel.
+      parameters:
+        - { name: hotel_id, in: query, schema: { type: integer }, description: Filtro (apenas admin) }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Room' }
+                  links: { type: object }
+                  meta: { type: object }
+        '401': { $ref: '#/components/responses/Message' }
+    post:
+      tags: [Quartos]
+      summary: Cadastra um quarto
+      description: Permitido para admin e gerente do hotel.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RoomInput' }
+      responses:
+        '201':
+          description: Quarto criado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Room' }
+        '401': { $ref: '#/components/responses/Message' }
+        '403': { $ref: '#/components/responses/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/rooms/available:
+    get:
+      tags: [Quartos]
+      summary: Quartos livres em um período
+      description: Considera a saída exclusiva (entrar no dia do check-out de outro hóspede é permitido).
+      parameters:
+        - { name: hotel_id, in: query, required: true, schema: { type: integer } }
+        - { name: check_in, in: query, required: true, schema: { type: string, format: date } }
+        - { name: check_out, in: query, required: true, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Quartos livres
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Room' }
+        '403': { $ref: '#/components/responses/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/rooms/{room}:
+    parameters:
+      - { name: room, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Quartos]
+      summary: Detalhe de um quarto
+      responses:
+        '200':
+          description: Quarto
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Room' }
+        '403': { $ref: '#/components/responses/Message' }
+        '404': { $ref: '#/components/responses/Message' }
+    put:
+      tags: [Quartos]
+      summary: Altera o nome do quarto
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: Suíte Master }
+      responses:
+        '200':
+          description: Quarto atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Room' }
+        '403': { $ref: '#/components/responses/Message' }
+        '404': { $ref: '#/components/responses/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    patch:
+      tags: [Quartos]
+      summary: Altera o nome do quarto (parcial)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, example: Suíte Master }
+      responses:
+        '200':
+          description: Quarto atualizado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Room' }
+        '403': { $ref: '#/components/responses/Message' }
+        '404': { $ref: '#/components/responses/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Quartos]
+      summary: Remove um quarto sem reservas
+      responses:
+        '204': { description: Removido }
+        '403': { $ref: '#/components/responses/Message' }
+        '404': { $ref: '#/components/responses/Message' }
+        '409':
+          description: O quarto possui reservas
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+
+  /api/reserves:
+    get:
+      tags: [Reservas]
+      summary: Lista reservas (paginado)
+      parameters:
+        - { name: hotel_id, in: query, schema: { type: integer }, description: Filtro (apenas admin) }
+        - { name: page, in: query, schema: { type: integer, minimum: 1 } }
+      responses:
+        '200':
+          description: Lista paginada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Reserve' }
+                  links: { type: object }
+                  meta: { type: object }
+        '401': { $ref: '#/components/responses/Message' }
+    post:
+      tags: [Reservas]
+      summary: Cria uma reserva
+      description: |
+        O total é calculado no servidor: `total = subtotal - desconto + taxa de serviço`.
+        As diárias devem cobrir cada noite entre `check_in` e `check_out` (saída exclusiva).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReserveInput' }
+      responses:
+        '201':
+          description: Reserva criada
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Reserve' }
+        '401': { $ref: '#/components/responses/Message' }
+        '403': { $ref: '#/components/responses/Message' }
+        '409':
+          description: Quarto já reservado no período
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /api/reserves/{reserve}:
+    get:
+      tags: [Reservas]
+      summary: Detalhe de uma reserva
+      parameters:
+        - { name: reserve, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Reserva
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Reserve' }
+        '403': { $ref: '#/components/responses/Message' }
+        '404': { $ref: '#/components/responses/Message' }
+
+  /api/reserves/{reserve}/payments:
+    parameters:
+      - { name: reserve, in: path, required: true, schema: { type: integer } }
+    get:
+      tags: [Pagamentos]
+      summary: Lista os pagamentos da reserva
+      responses:
+        '200':
+          description: Pagamentos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Payment' }
+        '403': { $ref: '#/components/responses/Message' }
+        '404': { $ref: '#/components/responses/Message' }
+    post:
+      tags: [Pagamentos]
+      summary: Registra um pagamento
+      description: O valor não pode exceder o saldo da reserva.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PaymentInput' }
+      responses:
+        '201':
+          description: Pagamento registrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Payment' }
+        '403': { $ref: '#/components/responses/Message' }
+        '404': { $ref: '#/components/responses/Message' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: Token obtido em /api/login
+
+  responses:
+    Message:
+      description: Erro com mensagem
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Message' }
+    ValidationError:
+      description: Dados inválidos
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message: { type: string }
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items: { type: string }
+
+  schemas:
+    Message:
+      type: object
+      properties:
+        message: { type: string }
+    User:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        email: { type: string }
+        role: { type: string, enum: [admin, manager, receptionist] }
+        hotel_id: { type: integer, nullable: true }
+    Room:
+      type: object
+      properties:
+        id: { type: integer }
+        hotel_id: { type: integer }
+        name: { type: string }
+        created_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time }
+    RoomInput:
+      type: object
+      required: [hotel_id, name]
+      properties:
+        hotel_id: { type: integer, example: 1 }
+        name: { type: string, example: Suíte 10 }
+    Guest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, example: Ana }
+        last_name: { type: string, nullable: true, example: Souza }
+        phone: { type: string, nullable: true, example: '5577999999999' }
+    Daily:
+      type: object
+      required: [date, value]
+      properties:
+        date: { type: string, format: date, example: '2026-12-20' }
+        value: { type: number, example: 100 }
+    PaymentInput:
+      type: object
+      required: [method, value]
+      properties:
+        method: { type: integer, example: 1, description: Código numérico da forma de pagamento (igual ao XML) }
+        value: { type: number, example: 50 }
+    Payment:
+      type: object
+      properties:
+        id: { type: integer }
+        method: { type: integer }
+        value: { type: string, example: '50.00' }
+        created_at: { type: string, format: date-time }
+    ReserveInput:
+      type: object
+      required: [hotel_id, room_id, check_in, check_out, guests, dailies]
+      properties:
+        hotel_id: { type: integer, example: 1 }
+        room_id: { type: integer, example: 1 }
+        check_in: { type: string, format: date, example: '2026-12-20' }
+        check_out: { type: string, format: date, example: '2026-12-22' }
+        coupon_code: { type: string, nullable: true, example: BEMVINDO10 }
+        guests:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Guest' }
+        dailies:
+          type: array
+          minItems: 1
+          items: { $ref: '#/components/schemas/Daily' }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/PaymentInput' }
+    Reserve:
+      type: object
+      properties:
+        id: { type: integer }
+        hotel_id: { type: integer }
+        room_id: { type: integer }
+        check_in: { type: string, format: date }
+        check_out: { type: string, format: date }
+        subtotal: { type: string, example: '200.00' }
+        discount: { type: string, example: '20.00' }
+        service_fee: { type: string, example: '18.00' }
+        total: { type: string, example: '198.00' }
+        coupon: { type: string, nullable: true }
+        paid: { type: string, example: '50.00' }
+        balance: { type: string, example: '148.00' }
+        guests:
+          type: array
+          items: { $ref: '#/components/schemas/Guest' }
+        dailies:
+          type: array
+          items: { $ref: '#/components/schemas/Daily' }
+        payments:
+          type: array
+          items: { $ref: '#/components/schemas/Payment' }
+        created_at: { type: string, format: date-time }
