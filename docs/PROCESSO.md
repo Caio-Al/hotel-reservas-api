@@ -231,3 +231,30 @@ criei também a BusinessRuleException, uma exceção base pras regras de negóci
 rodei a suíte inteira (27 testes, passando). Os 7 testes novos (AuthTest) cobrem login com token, senha errada, validação, 401 sem token, logout revogando o token, o limite de 5 tentativas e o 404 genérico.
 
 também testei com curl na API rodando: login do admin do seeder, /api/me com token (200), sem token (401, com e sem o Accept), rota inexistente (404) e logout (200).
+
+## crud de quartos 
+
+foi pedido um crud por api rest então fiz as rotas de /api/rooms, seguindo a arquitetura de camadas.
+
+### rotas
+
+201 ao criar, 204 ao apagar, 401 sem login, 403 sem permissão, 404 se não existe, 409 se o quarto tem reservas e 422 se os dados são inválidos
+
+
+
+### permissões
+
+
+nome repetido no mesmo hotel dá 422, mas o mesmo nome em hotéis diferentes pode.
+
+admin vê e mexe em todos os hotéis
+gerente cadastra, altera e remove quartos só do próprio hotel
+recepcionista só consulta
+
+o filtro por hotel é feito no servidor. Quem não é admin e tenta ver outro hotel pela URL ?hotel_id= tem o filtro ignorado e vê só o próprio. Usuário sem hotel recebe lista vazia
+
+### testes
+
+15 testes em RoomApiTest, cobrindo listagem por papel e por hotel, cadastro, validação, permissões, atualização, remoção com e sem reservas e disponibilidade. [confirme o total: a suíte inteira ficou com 42 testes passando]
+
+também testei na API rodando, com o admin, o gerente e a recepcionista do seeder: o gerente lista só o hotel 1 e cria quarto nele (201), a recepcionista não cria (403), o gerente não cria nem vê quarto do hotel 2 (403), apagar o quarto 1, que tem reserva, dá 409, e a consulta de disponibilidade mostra o quarto sem reserva no período.
