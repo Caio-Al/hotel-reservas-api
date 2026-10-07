@@ -8,11 +8,6 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 
-/**
- * Dados iniciais para desenvolvimento. Rode DEPOIS da importação (hotel:import-xml),
- * porque gerente e recepcionista são vinculados ao hotel 1.
- * A senha "password" é apenas para ambiente local.
- */
 class DatabaseSeeder extends Seeder
 {
     public function run(): void

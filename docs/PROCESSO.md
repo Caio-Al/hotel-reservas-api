@@ -307,3 +307,17 @@ sail artisan schedule:list
 sail logs --tail=20 scheduler  
 sail artisan hotel:import-xml  
 ```
+
+### documentação da api (openapi)
+
+tentei fazer o diferencial do desafio que é o swagger/openapi se a api vai ser usada por outro sistema, então precisa de um contrato que pessoas e ferramentas consigam ler, como rotas, parâmetros, corpo, respostas e erros, então a ideia for escrever o contrato á mão em docs/openapi.yaml, em vez de usar anotações no codigo. assim o contrato fica separado dos controllers, da pra revisar como qualquer arquivo e não enche as classes de comentarios. a desvantagem é ter que manter uma atualização constante no arquivo
+
+
+### arquivos
+- `docs/openapi.yaml`
+- `resources/views/docs.blade.php`
+- `routes/web.php` (rotas `/docs` e `/docs/openapi.yaml`)
+- `tests/Feature/DocsTest.php`
+
+### testes
+o DocsTest tem 3 testes, a página /docs abre, o contrato é servido e declara openapi: 3.0.0, e os caminhos principais aparecem no arquivo. com ele o total ficou em 69 testes passando.
