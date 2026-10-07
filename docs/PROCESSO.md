@@ -258,3 +258,29 @@ o filtro por hotel é feito no servidor. Quem não é admin e tenta ver outro ho
 15 testes em RoomApiTest, cobrindo listagem por papel e por hotel, cadastro, validação, permissões, atualização, remoção com e sem reservas e disponibilidade. [confirme o total: a suíte inteira ficou com 42 testes passando]
 
 também testei na API rodando, com o admin, o gerente e a recepcionista do seeder: o gerente lista só o hotel 1 e cria quarto nele (201), a recepcionista não cria (403), o gerente não cria nem vê quarto do hotel 2 (403), apagar o quarto 1, que tem reserva, dá 409, e a consulta de disponibilidade mostra o quarto sem reserva no período.
+
+## reservas e pagamentos
+
+seguir com o post de reserva em rest, o diferencial eram as regras de sistema, então apliquei elas tambem
+
+### premissas
+
+como não tinham essas informações no desafio, assumi alumas premissas pra seguir com o projeto, como taxa de serviço, a 10%, fiz como regra de negocio, bem, a taxa da pra mudar pelo .env sem mexer no codigo, fica em config/hotel.php (HOTEL_SERVICE_FEE_PERCENT), não implementei juros, e a reserva bloquei um quarto naquele periodo de tempo
+
+### preço
+
+o calculo é feito em centavos, pra n ter erro de arredondamento de float
+
+o subtotal é a soma das diarias
+desconto é o cupom que nunca serar maior que o subtotal
+taxa de serviço é 10 do subtotal - o desconto
+total é subtotal - desconto + a taxa
+
+### testes
+
+7 de preço e 16 de api, ficou 66 no total contando com o resto
+
+### problemas que apareceram
+o parâmetro de rota {reserf} o Route::apiResource('reserves', ...) do Laravel singulariza "reserves" como "reserf", aí o `Reserve $reserve` não era resolvido, tudo dava 404. resolvi com ->parameters(['reserves' => 'reserve']) em routes/api.php.
+
+no teste com corpo vazio: o teste esperava 422, mas quem testava era recepcionista e a autorização roda antes da validação, então dava 403. corrigi o teste, a recepcionista leva 403 e o admin leva 422 com os erros de validação. também adicionei um teste de 404 pra reserva inexistente.
