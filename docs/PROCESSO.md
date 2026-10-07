@@ -340,3 +340,20 @@ o padrão vale desde o passo 3 (`feat/camada-repositorios`). os quatro primeiros
 ```bash
 git log --oneline --graph --decorate
 ```
+
+
+## fechamento do projeto
+
+### o que revisei antes de entregar
+- `APP_DEBUG=false` no `.env.example`: com debug ligado, um erro mostra caminhos e trechos de código na resposta, então o exemplo sai com o valor seguro
+- o `.env.example` tinha ficado com sqlite, mas o docker usa mysql e o compose lê o banco do `.env`. troquei pro mysql do sail, senão quem clonasse e copiasse o exemplo não conseguiria rodar o `migrate`
+- fuso horário: o `config/app.php` tinha 'UTC' fixo, então coloquei `env('APP_TIMEZONE', 'UTC')` e defini `America/Bahia`. foi por causa da validação `after_or_equal:today` do check-in e da validade dos cupons, que usam a data da aplicação (em UTC, depois das 21h em Salvador já seria "amanhã"), e pra o cron das 02:00 ser 02:00 no horário do hotel
+- conferi o `.gitignore` e o histórico inteiro: `.env`, `vendor`, banco sqlite, logs e tokens nunca foram commitados (o `.env.example` tem `APP_KEY` vazio). acrescentei `.env.*` ao `.gitignore`, com exceção do exemplo
+- `docs/PROCESSO.md`: tirei um rascunho que tinha sobrado e atualizei dois trechos que ficaram desatualizados (a exceção de regra de negócio e o fuso)
+- montei o `README.md` com como rodar, como cadastrar um quarto, como executar o cron e como criar uma reserva, que é o que o desafio pede na documentação
+
+### verificação final
+do zero: `sail down -v`, `sail up -d`, `migrate`, `hotel:import-xml` (3 hotéis, 6 quartos, 6 reservas, 1 aviso), `db:seed` e `sail artisan test` (69 testes passando). depois clonei o repositório em outra pasta e segui só o README pra garantir que sobe sem nenhum ajuste manual.
+
+### entrega
+tag `v1.0.0` no commit final e primeiro push do histórico completo pro GitHub.
