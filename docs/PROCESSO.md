@@ -284,3 +284,26 @@ total é subtotal - desconto + a taxa
 o parâmetro de rota {reserf} o Route::apiResource('reserves', ...) do Laravel singulariza "reserves" como "reserf", aí o `Reserve $reserve` não era resolvido, tudo dava 404. resolvi com ->parameters(['reserves' => 'reserve']) em routes/api.php.
 
 no teste com corpo vazio: o teste esperava 422, mas quem testava era recepcionista e a autorização roda antes da validação, então dava 403. corrigi o teste, a recepcionista leva 403 e o admin leva 422 com os erros de validação. também adicionei um teste de 404 pra reserva inexistente.
+
+
+## docker e o cron rodando em container
+
+o desafio pede que a importação do XML rode via CRON e dá o Docker como diferencial. o projeto já rodava em Docker desde o começo, então. o que faltava era o cron.
+
+### problema
+dentro de um container não existe crontab do sistema, então não dava pra simplesmente agendar o comando como num servidor comum.
+
+### solução
+criei um serviço separado chamado scheduler, que usa a mesma imagem do app e roda php artisan schedule:work que é o agendador do Laravel. ele verifica as tarefas a cada minuto e dispara o hotel:import-xml todo dia às 02:00, que é o que está em routes/console.php.
+
+tudo ficou em um arquivo novo, compose.override.yaml. o Docker Compose lê ele sozinho junto com o compose.yaml do Sail, então não precisei mexer no arquivo que o Sail gera
+
+### como subir 
+
+```bash
+sail up -d
+sail ps                         
+sail artisan schedule:list      
+sail logs --tail=20 scheduler  
+sail artisan hotel:import-xml  
+```

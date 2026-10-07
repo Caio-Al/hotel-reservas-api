@@ -1,0 +1,11 @@
+services:
+    scheduler:
+        extends:
+            file: compose.yaml
+            service: laravel.test
+        container_name: hotel-reservas-scheduler
+        command: ['php', 'artisan', 'schedule:work']
+        ports: !reset []
+        restart: unless-stopped
+        depends_on:
+            - mysql
