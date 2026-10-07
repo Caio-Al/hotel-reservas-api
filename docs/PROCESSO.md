@@ -52,7 +52,7 @@ usei os arquivos dos XMLs pra modelar o banco, cada elemento virou uma tabela(ho
 
 a ordem de criação foi 1 por vem na ordem dos hotels, rooms, reserves, guest, dailies e payments, as migrations rodam pela data do nome do arquivo e uma chave estrangeira precisa que a tabela referencia ja exista, 
 
-coloquei restrictOnDelete em reserves o banco recusa apgar um hotel ou quarto que tenha reservas, em vez de apagar o historico em silencio 
+coloquei restrictOnDelete em reserves o banco recusa apagar um hotel ou quarto que tenha reservas, em vez de apagar o historico em silencio 
 
 o cascadeOnDelete nos filhos da reserva, hospedes, diarias e pagamentos so existem dentro da reserva, então se apgou a reserva somem juntos
 
@@ -69,7 +69,7 @@ o paymentes.method como unsignedSmallInteger pq o XML envia a froma de pagamento
 
 testei manualmente pelo tinker, coloquei uma situação completa, como hotel, quarto, reserva, hóspede, diarias e pagamentos, e na hora de retornar os dados fiz erros de proposito pra verificar como comportava, com id inexistente de hotel e remoção de quarto com reserva. 
 
-### aquitetura e ambiente de testes
+### arquitetura e ambiente de testes
 
 a arquitetura em camadas que estou implementando é com controller, Service e Repository
 
@@ -147,7 +147,7 @@ segui a mesma arquitetura em camadas, o comando importXML so recebe a pasta, cha
 
 ## dados estranhos
 
-o XML é tratado como uma fonte de dados real, então se algo estranho aparece, é importado mesmo assim e vira uma viso no log, em vez de derrubar a importação
+o XML é tratado como uma fonte de dados real, então se algo estranho aparece, é importado mesmo assim e vira uma aviso no log, em vez de derrubar a importação
 
 os casos que tem, são:
 
@@ -163,7 +163,7 @@ o agendamento fica em routes/console.php com o scheduler do laravel, em vez de u
 
 configurei pra rodar todo dia às 02:00, com withoutOverlapping()(se uma execução ainda estiver rodando, a próxima não começa) e a saída vai pra storage/logs/import.log. O desafio só pede "via cron" e não fala em frequência, escolhi esse horário por ser de pouco uso.
 
-apesar de que o laravel ta em UTC então as 2hs são 23hs na bahia
+o fuso do projeto é America/Bahia (APP_TIMEZONE), então o 02:00 é horário de Salvador.
 
 ## teste
 
@@ -203,7 +203,7 @@ payments.method fica como número
 
 segurança e logs de aplicação foram pedidos como diferenciais, e como a api vai mexer com reservas e pagamentos, toda rota exige identificação, menos o login
 
-## autentificação
+## autenticação
 
 usei o Laravel Sanctum, que já veio com o install:api. O login devolve um token, e o cliente manda ele no cabeçalho Authorization: Bearer. O token fica guardado no banco, então o logout apaga ele e ele deixa de valer na hora. Escolhi isso no lugar do JWT porque o JWT puro não tem uma revogação simples, e o Passport (OAuth2 completo) acredito que seja pesado pra uma api de uso interno
 
@@ -224,7 +224,7 @@ mudei o log para o canal diário: um arquivo por dia em storage/logs, guardando 
 
 por enquanto são registrados o login e a falha de login (com o id e o IP, nem senha, nem o token), a importação do XML e as regras de negócio violadas. Essas últimas vão como warning, porque são situações esperadas, e erros inesperados vão como error. Os logs de quarto, reserva e pagamento entram junto com as rotas deles.
 
-criei também a BusinessRuleException, uma exceção base pras regras de negócio (quarto indisponível, cupom inválido e etc). Cada uma define seu status HTTP e responde em JSON. Ainda não é usada, vai ser nos passos de reservas.
+criei também a BusinessRuleException, uma exceção base pras regras de negócio (quarto indisponível, cupom inválido e etc). Cada uma define seu status HTTP e responde em JSON. ela é usada pelas exceções de reserva e de quarto (quarto indisponível, cupom inválido, pagamento acima do saldo, quarto com reservas), e os logs de quarto, reserva e pagamento foram adicionados junto com as rotas.
 
 ### como testei
 
@@ -237,6 +237,7 @@ também testei com curl na API rodando: login do admin do seeder, /api/me com to
 foi pedido um crud por api rest então fiz as rotas de /api/rooms, seguindo a arquitetura de camadas.
 
 ### rotas
+GET /api/rooms, GET /api/rooms/available, POST /api/rooms, GET /api/rooms/{id}, PUT/PATCH /api/rooms/{id}, DELETE /api/rooms/{id}
 
 201 ao criar, 204 ao apagar, 401 sem login, 403 sem permissão, 404 se não existe, 409 se o quarto tem reservas e 422 se os dados são inválidos
 
@@ -255,8 +256,7 @@ o filtro por hotel é feito no servidor. Quem não é admin e tenta ver outro ho
 
 ### testes
 
-15 testes em RoomApiTest, cobrindo listagem por papel e por hotel, cadastro, validação, permissões, atualização, remoção com e sem reservas e disponibilidade. [confirme o total: a suíte inteira ficou com 42 testes passando]
-
+15 testes em RoomApiTest, cobrindo listagem por papel e por hotel, cadastro, validação, permissões, atualização, remoção com e sem reservas e disponibilidade. a suíte inteira ficou com 42 testes passando.
 também testei na API rodando, com o admin, o gerente e a recepcionista do seeder: o gerente lista só o hotel 1 e cria quarto nele (201), a recepcionista não cria (403), o gerente não cria nem vê quarto do hotel 2 (403), apagar o quarto 1, que tem reserva, dá 409, e a consulta de disponibilidade mostra o quarto sem reserva no período.
 
 ## reservas e pagamentos
@@ -321,3 +321,22 @@ tentei fazer o diferencial do desafio que é o swagger/openapi se a api vai ser 
 
 ### testes
 o DocsTest tem 3 testes, a página /docs abre, o contrato é servido e declara openapi: 3.0.0, e os caminhos principais aparecem no arquivo. com ele o total ficou em 69 testes passando.
+
+## padrão de git
+
+o desafio lista "GIT Pattern" como diferencial, e o histórico do repositório é parte do que é avaliado, então escrevi o padrão que uso em docs/GIT.md em vez de deixar só implícito.
+
+### o que escolhi
+conventional commits(`feat:`, `fix:`, `docs:`, `test:`, `refactor:`, `chore:`): o tipo já diz o que mudou sem abrir o código
+uma branch por tarefa(`feat/crud-quartos`, `docs/openapi`...) saindo da main e voltando com merge `--no-ff`**, que deixa um commit de merge e o histórico mostra onde cada funcionalidade começou e terminou
+commits pequenos e funcionais: um passo, um commit, só depois de rodar a suíte inteira
+tag semântica `v1.0.0` na entrega, pra marcar exatamente a versão avaliada
+nada de segredo no repositório: `.env` fica fora (só o `.env.example` entra), `vendor/` e logs também
+
+### como ficou na prática
+o padrão vale desde o passo 3 (`feat/camada-repositorios`). os quatro primeiros commits (projeto Laravel, migrations e models, validação e decisões de modelagem) foram feitos direto na `main`, antes de eu definir o padrão, e um deles ficou sem o prefixo do tipo. preferi não reescrever o histórico por causa disso. a partir do passo 3, cada passo foi uma branch, um commit e um merge.
+
+### como conferir
+```bash
+git log --oneline --graph --decorate
+```
